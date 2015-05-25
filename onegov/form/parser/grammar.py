@@ -216,6 +216,7 @@ from onegov.form.compat import unicode_characters
 from pyparsing import (
     col,
     Combine,
+    Empty,
     Forward,
     Group,
     indentedBlock,
@@ -238,9 +239,6 @@ ParserElement.setDefaultWhitespaceChars(' \t')
 
 text = Word(unicode_characters)
 numeric = Word(nums)
-
-# shortcut
-indented = indentedBlock
 
 
 block = Forward()
@@ -296,6 +294,21 @@ def enclosed_in(expr, characters):
     """ Wraps the given expression in the given characters. """
     left, right = characters
     return Suppress(left) + expr + Suppress(right)
+
+
+class Stack(list):
+    def __init__(self, *args, **kwargs):
+        super(Stack, self).__init__(*args, **kwargs)
+
+    def set(self, string, line, tokens):
+        if len(self) == 0:
+            self[:] = [col(line, string)]
+
+
+def indented(expr):
+    stack = Stack()
+    marker = Empty().setParseAction(stack.set)
+    return Group(marker + indentedBlock(expr, stack)).setParseAction(unwrap)
 
 
 def number_enclosed_in(characters):
@@ -432,16 +445,6 @@ def stdnum():
     return parser
 
 
-class Stack(list):
-    length_of_marker_box = 3
-
-    def init(self, string, line, tokens):
-        column = col(line, string) + self.length_of_marker_box
-
-        if len(self) == 0 or self[0] < column:
-            self[:] = [column]
-
-
 def marker_box(characters):
     """ Returns a marker box:
 
@@ -458,9 +461,9 @@ def marker_box(characters):
     # Initialize the stack to the position of the label (which comes after
     # the checkbox), to get the correct indentation checks by pyparsing.
     stack = Stack()
-    check.setParseAction(stack.init)
+    check.setParseAction(stack.set)
 
-    dependencies = Group(indented(block, stack))('dependencies')
+    dependencies = Group(indented(block))('dependencies')
     dependencies.setParseAction(unwrap)
 
     return Group(check + label + Optional(dependencies))

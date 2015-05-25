@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
+import pyparsing as pp
+import pytest
 import textwrap
 
 from onegov.form.parser.core import stress_indentations
 from onegov.form.parser.grammar import (
+    indented,
     block_content,
+    checkboxes,
     email,
     field_identifier,
-    checkboxes,
     password,
-    textarea,
-    textfield,
     radios,
     stdnum,
+    text,
     text_without,
+    textarea,
+    textfield,
     with_whitespace_inside
 )
 
@@ -385,3 +389,66 @@ def test_nested_regression():
     assert blocks[1].type == 'textarea'
 
     assert len(blocks[0].parts) == 2
+
+
+@pytest.mark.parametrize("src", [
+    textwrap.dedent("""
+        Parent
+            Child
+                Grandchild
+            Brother
+        Sibling
+            Nephew
+    """),
+    textwrap.dedent("""
+        Parent
+          Child
+            Grandchild
+          Brother
+        Sibling
+          Nephew
+    """),
+    textwrap.dedent("""
+        Parent
+
+
+            Child
+
+                Grandchild
+            Brother
+
+        Sibling
+
+            Nephew
+    """)
+])
+def test_indented(src):
+
+    block = pp.Forward()
+
+    children = pp.ZeroOrMore(indented(block))('children')
+    block_content = text('name') + children
+
+    block << block_content
+
+    parent, sibling = block.searchString(src)
+
+    assert parent.name == 'Parent'
+    assert sibling.name == 'Sibling'
+
+    assert len(parent.children) == 2
+    assert len(sibling.children) == 1
+
+    child, brother = parent.children
+
+    assert child.name == 'Child'
+    assert brother.name == 'Brother'
+    assert len(brother.children) == 0
+    assert len(child.children) == 1
+
+    grandchild = child.children[0]
+    assert grandchild.name == 'Grandchild'
+    assert not grandchild.children
+
+    nephew = sibling.children[0]
+    assert nephew.name == 'Nephew'
