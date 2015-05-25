@@ -145,10 +145,11 @@ def test_parse_checkbox():
 def test_dependent_validation():
 
     text = dedent("""
-        Payment * = ( ) Bill
-                        Address * = ___
-                    ( ) Credit Card
-                        Credit Card Number * = ___
+        Payment * =
+            ( ) Bill
+                Address * = ___
+            ( ) Credit Card
+                Credit Card Number * = ___
     """)
 
     form_class = parse_form(text)

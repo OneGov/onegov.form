@@ -3,7 +3,6 @@ import pyparsing as pp
 import pytest
 import textwrap
 
-from onegov.form.parser.core import stress_indentations
 from onegov.form.parser.grammar import (
     indented,
     block_content,
@@ -285,9 +284,10 @@ def test_multiline_checkboxes():
 
 def test_nested_blocks():
     form = textwrap.dedent("""
-        Payment = (x) Bill
-                  ( ) Credit Card
-                      Address = ___
+        Payment =
+            (x) Bill
+            ( ) Credit Card
+                Address = ___
 
     """)
     result = block_content().searchString(form)
@@ -300,15 +300,18 @@ def test_nested_blocks():
 
 def test_nested_nested():
     form = textwrap.dedent("""
-        Payment = (x) Bill
-                      Address = ___
-                      Comment = ...
+        Payment =
+            (x) Bill
+                Address = ___
+                Comment = ...
 
-                  ( ) Credit Card
-                      Type = (x) Visa
-                             ( ) Mastercard
-                      Store = [ ] Address
-                              [x] Card
+            ( ) Credit Card
+                Type =
+                    (x) Visa
+                    ( ) Mastercard
+                Store =
+                    [ ] Address
+                    [x] Card
 
     """)
     result = block_content().searchString(form)
@@ -338,12 +341,14 @@ def test_nested_nested():
 
 def test_nested_nested_nested():
     form = textwrap.dedent("""
-        Delivery = (x) Pickup
-                   ( ) Fedex
-                       Address = (x) Postbox
-                                     Postbox Number = ___
-                                 ( ) Home Address
-                                     Street = ___
+        Delivery =
+            (x) Pickup
+            ( ) Fedex
+                Address =
+                    (x) Postbox
+                        Postbox Number = ___
+                    ( ) Home Address
+                        Street = ___
     """)
     result = block_content().searchString(form)
 
@@ -375,14 +380,6 @@ def test_nested_regression():
         Kommentar = ...
     """)
     blocks = block_content().searchString(form)
-
-    assert len(blocks) == 2
-    assert blocks[0].type == 'radio'
-    assert blocks[1].type == 'textarea'
-
-    assert len(blocks[0].parts) == 1
-
-    blocks = block_content().searchString(stress_indentations(form))
 
     assert len(blocks) == 2
     assert blocks[0].type == 'radio'

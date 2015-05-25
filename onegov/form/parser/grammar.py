@@ -212,41 +212,24 @@ Just like radiobuttons, checkboxes may be nested to created dependencies::
                               Description = ___
 
 """
+import pyparsing as pp
+
 from onegov.form.compat import unicode_characters
-from pyparsing import (
-    col,
-    Combine,
-    Empty,
-    Forward,
-    Group,
-    indentedBlock,
-    LineEnd,
-    Literal,
-    MatchFirst,
-    nums,
-    OneOrMore,
-    Optional,
-    ParserElement,
-    Regex,
-    Suppress,
-    White,
-    Word,
-)
 
 
 # we want newlines to be significant
-ParserElement.setDefaultWhitespaceChars(' \t')
+pp.ParserElement.setDefaultWhitespaceChars(' \t')
 
-text = Word(unicode_characters)
-numeric = Word(nums)
+text = pp.Word(unicode_characters)
+numeric = pp.Word(pp.nums)
 
 
-block = Forward()
+block = pp.Forward()
 
 
 def text_without(characters):
     """ Returns all printable text without the given characters. """
-    return Word(unicode_characters, excludeChars=characters)
+    return pp.Word(unicode_characters, excludeChars=characters)
 
 
 def matches(character):
@@ -287,13 +270,13 @@ def with_whitespace_inside(expr):
     outside the expression.
 
     """
-    return Combine(OneOrMore(expr | White(' ', max=1) + expr))
+    return pp.Combine(pp.OneOrMore(expr | pp.White(' ', max=1) + expr))
 
 
 def enclosed_in(expr, characters):
     """ Wraps the given expression in the given characters. """
     left, right = characters
-    return Suppress(left) + expr + Suppress(right)
+    return pp.Suppress(left) + expr + pp.Suppress(right)
 
 
 class Stack(list):
@@ -302,13 +285,14 @@ class Stack(list):
 
     def set(self, string, line, tokens):
         if len(self) == 0:
-            self[:] = [col(line, string)]
+            self[:] = [pp.col(line, string)]
 
 
-def indented(expr):
+def indented(expr, marker=None):
     stack = Stack()
-    marker = Empty().setParseAction(stack.set)
-    return Group(marker + indentedBlock(expr, stack)).setParseAction(unwrap)
+    marker = (marker or pp.Empty()).setParseAction(stack.set)
+    content = marker + pp.indentedBlock(expr, stack)
+    return pp.Group(content).setParseAction(unwrap)
 
 
 def number_enclosed_in(characters):
@@ -328,9 +312,9 @@ def mark_enclosed_in(characters):
         [ ]
     """
     left, right = characters
-    return MatchFirst((
-        Literal(left + 'x' + right).setParseAction(literal(True)),
-        Literal(left + ' ' + right).setParseAction(literal(False))
+    return pp.MatchFirst((
+        pp.Literal(left + 'x' + right).setParseAction(literal(True)),
+        pp.Literal(left + ' ' + right).setParseAction(literal(False))
     ))
 
 
@@ -346,7 +330,7 @@ def textfield():
     """
     length = number_enclosed_in('[]')('length')
 
-    textfield = Suppress('___') + Optional(length)
+    textfield = pp.Suppress('___') + pp.Optional(length)
     textfield.setParseAction(tag(type='text'))
 
     return textfield
@@ -365,7 +349,7 @@ def textarea():
 
     rows = number_enclosed_in('[]')('rows')
 
-    textarea = Suppress('...') + Optional(rows)
+    textarea = pp.Suppress('...') + pp.Optional(rows)
     textarea.setParseAction(tag(type='textarea'))
 
     return textarea
@@ -380,7 +364,7 @@ def password():
 
     """
 
-    return Suppress('***').setParseAction(tag(type='password'))
+    return pp.Suppress('***').setParseAction(tag(type='password'))
 
 
 def email():
@@ -391,7 +375,7 @@ def email():
         @@@
 
     """
-    return Suppress('@@@').setParseAction(tag(type='email'))
+    return pp.Suppress('@@@').setParseAction(tag(type='email'))
 
 
 def date():
@@ -403,7 +387,7 @@ def date():
 
     """
 
-    return Suppress('YYYY.MM.DD').setParseAction(tag(type='date'))
+    return pp.Suppress('YYYY.MM.DD').setParseAction(tag(type='date'))
 
 
 def datetime():
@@ -415,7 +399,7 @@ def datetime():
 
     """
 
-    return Suppress('YYYY.MM.DD HH:MM').setParseAction(tag(type='datetime'))
+    return pp.Suppress('YYYY.MM.DD HH:MM').setParseAction(tag(type='datetime'))
 
 
 def time():
@@ -427,7 +411,7 @@ def time():
 
     """
 
-    return Suppress('HH:MM').setParseAction(tag(type='time'))
+    return pp.Suppress('HH:MM').setParseAction(tag(type='time'))
 
 
 def stdnum():
@@ -438,8 +422,8 @@ def stdnum():
         # iban
 
     """
-    prefix = Suppress('#') + Optional(White(" "))
-    parser = prefix + Regex(r'[a-z\.]+')('format')
+    prefix = pp.Suppress('#') + pp.Optional(pp.White(" "))
+    parser = prefix + pp.Regex(r'[a-z\.]+')('format')
     parser.setParseAction(tag(type='stdnum'))
 
     return parser
@@ -458,15 +442,10 @@ def marker_box(characters):
     check = mark_enclosed_in(characters)('checked')
     label = with_whitespace_inside(text_without(characters))('label')
 
-    # Initialize the stack to the position of the label (which comes after
-    # the checkbox), to get the correct indentation checks by pyparsing.
-    stack = Stack()
-    check.setParseAction(stack.set)
+    before_check = pp.Empty()
+    dependencies = indented(block, marker=before_check)('dependencies')
 
-    dependencies = Group(indented(block))('dependencies')
-    dependencies.setParseAction(unwrap)
-
-    return Group(check + label + Optional(dependencies))
+    return pp.Group(before_check + check + label + pp.ZeroOrMore(dependencies))
 
 
 def radios():
@@ -477,7 +456,7 @@ def radios():
         ( ) Male (x) Female ( ) Space Alien
     """
 
-    return OneOrMore(marker_box('()')).setParseAction(tag(type='radio'))
+    return pp.OneOrMore(marker_box('()')).setParseAction(tag(type='radio'))
 
 
 def checkboxes():
@@ -488,7 +467,7 @@ def checkboxes():
         [] Android [x] iPhone [x] Dumb Phone
 
     """
-    boxes = OneOrMore(marker_box('[]'))
+    boxes = pp.OneOrMore(marker_box('[]'))
     boxes.setParseAction(tag(type='checkbox'))
 
     return boxes
@@ -508,7 +487,7 @@ def fieldset_title():
 
     label = with_whitespace_inside(text).setResultsName('label')
 
-    fieldset_title = Suppress('#') + (Suppress('...') | label)
+    fieldset_title = pp.Suppress('#') + (pp.Suppress('...') | label)
     fieldset_title = fieldset_title.setParseAction(tag(type='fieldset'))
 
     return fieldset_title
@@ -523,18 +502,18 @@ def field_identifier():
 
     """
 
-    required = Literal('*').setParseAction(matches('*'))
-    required = Optional(required, default=False)('required')
+    required = pp.Literal('*').setParseAction(matches('*'))
+    required = pp.Optional(required, default=False)('required')
 
     # a field name can contain any kind of character, except for a '=' and
     # a '*', which we'll need later for the field definition
     characters = with_whitespace_inside(text_without('*='))
-    label = Combine(OneOrMore(characters))('label')
+    label = pp.Combine(pp.OneOrMore(characters))('label')
 
     # a field declaration begins with spaces (so we can differentiate between
     # text and catual fields), then includes the name and the '*' which marks
     # required fields
-    return label + required + Suppress('=')
+    return label + required + pp.Suppress('=')
 
 
 def block_content():
@@ -542,12 +521,12 @@ def block_content():
     form string for occurences of these blocks.
 
     """
-    LE = Suppress(LineEnd())
+    LE = pp.Suppress(pp.LineEnd())
     identifier = field_identifier()
 
-    return MatchFirst([
+    return pp.MatchFirst([
         fieldset_title(),
-        identifier + MatchFirst([
+        identifier + pp.MatchFirst([
             textfield(),
             textarea(),
             password(),
@@ -557,8 +536,8 @@ def block_content():
             date(),
             time()
         ]),
-        identifier + OneOrMore(Optional(LE) + radios())('parts'),
-        identifier + OneOrMore(Optional(LE) + checkboxes())('parts')
+        identifier + pp.OneOrMore(pp.Optional(LE) + radios())('parts'),
+        identifier + pp.OneOrMore(pp.Optional(LE) + checkboxes())('parts')
     ])
 
 
