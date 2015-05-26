@@ -386,6 +386,8 @@ def test_nested_regression():
     assert blocks[1].type == 'textarea'
 
     assert len(blocks[0].parts) == 2
+    assert blocks[0].parts[0].label == 'I want it delivered'
+    assert blocks[0].parts[1].label == 'I want to pick it up'
 
 
 @pytest.mark.parametrize("src", [
