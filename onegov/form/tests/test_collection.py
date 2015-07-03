@@ -59,7 +59,7 @@ def test_submit_form(session):
     data = MultiDict([
         ('first_name', 'Bill'),
         ('last_name', 'Lumbergh'),
-        ('date', '2011-01-01')
+        ('date', '1.1.2011')
     ])
 
     submitted_form = form.form_class(data)
@@ -90,7 +90,7 @@ def test_submission_extra_data(session):
         ('first_name', 'Bill'),
         ('last_name', 'Lumbergh'),
         ('e_mail', 'bill.lumbergh@initech.com'),
-        ('date', '2011-01-01')
+        ('date', '1.01.2011')
     ])
 
     submitted_form = form.form_class(data)

@@ -496,6 +496,7 @@ def handle_block(builder, block, dependency=None):
             label=identifier.label,
             dependency=dependency,
             required=identifier.required,
+            format='%d.%m.%Y',
         )
     elif field.type == 'datetime':
         field_id = builder.add_field(
@@ -503,6 +504,7 @@ def handle_block(builder, block, dependency=None):
             label=identifier.label,
             dependency=dependency,
             required=identifier.required,
+            format='%d.%m.%Y %H:%M:%S',
         )
     elif field.type == 'time':
         field_id = builder.add_field(
