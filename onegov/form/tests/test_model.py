@@ -1,6 +1,8 @@
 import pytest
 
+from datetime import date
 from onegov.form import FormCollection, FormExtension
+from sqlalchemy.exc import IntegrityError
 from webob.multidict import MultiDict
 from wtforms import ValidationError
 
@@ -77,3 +79,57 @@ def test_form_extensions(session):
     submission = collection.submissions.add(
         'members', form, state='complete')
     assert issubclass(submission.form_class, CorporateOnly)
+
+
+def test_registration_window_adjacent(session):
+    forms = FormCollection(session)
+
+    summer = forms.definitions.add('Summercamp', definition="E-Mail = @@@")
+    winter = forms.definitions.add('Witnercamp', definition="E-Mail = @@@")
+
+    summer.add_registration_window(date(2017, 4, 1), date(2017, 6, 30))
+    summer.add_registration_window(date(2018, 4, 1), date(2018, 6, 30))
+
+    winter.add_registration_window(date(2017, 4, 1), date(2017, 6, 30))
+    winter.add_registration_window(date(2018, 4, 1), date(2018, 6, 30))
+
+    # no overlap -> different forms
+    session.flush()
+
+    # adjacent, fails
+    summer.add_registration_window(date(2017, 1, 1), date(2017, 4, 1))
+
+    with pytest.raises(IntegrityError) as e:
+        session.flush()
+
+    assert 'no_adjacent_registration_windows' in str(e)
+
+
+def test_registration_window_overlaps(session):
+    forms = FormCollection(session)
+
+    summer = forms.definitions.add('Summercamp', definition="E-Mail = @@@")
+    summer.add_registration_window(date(2017, 4, 1), date(2017, 6, 30))
+
+    # no overlap -> different forms
+    session.flush()
+
+    # overlapping, fails
+    summer.add_registration_window(date(2017, 1, 1), date(2017, 4, 2))
+
+    with pytest.raises(IntegrityError) as e:
+        session.flush()
+
+    assert 'no_overlapping_registration_windows' in str(e)
+
+
+def test_registration_window_end_before_start(session):
+    camp = FormCollection(session).definitions.add(
+        'Camp', definition="E-Mail = @@@")
+
+    camp.add_registration_window(date(2018, 1, 1), date(2017, 1, 1))
+
+    with pytest.raises(IntegrityError) as e:
+        session.flush()
+
+    assert 'start_smaller_than_end' in str(e)
