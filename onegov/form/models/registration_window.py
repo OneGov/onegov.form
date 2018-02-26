@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.sql.elements import quoted_name
+from sqlalchemy.orm import relationship
 from uuid import uuid4
 
 
@@ -44,6 +45,9 @@ class FormRegistrationWindow(Base, TimestampMixin):
 
     #: enable an overflow of submissions
     overflow = Column(Boolean, nullable=False, default=True)
+
+    #: submissions linked to this
+    submissions = relationship('FormSubmission', backref='registration_window')
 
     __table_args__ = (
 

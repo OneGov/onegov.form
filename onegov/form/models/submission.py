@@ -63,6 +63,10 @@ class FormSubmission(Base, TimestampMixin, Payable, AssociatedFiles,
         nullable=False
     )
 
+    #: the registration window linked with this submission
+    registration_window_id = Column(
+        UUID, ForeignKey("form_registration_windows.id"), nullable=True)
+
     #: payment options -> copied from the dfinition at the moment of
     #: submission. This is stored alongside the submission as the original
     #: form setting may change later.
