@@ -90,8 +90,12 @@ def test_registration_window_adjacent(session):
     summer.add_registration_window(date(2017, 4, 1), date(2017, 6, 30))
     summer.add_registration_window(date(2018, 4, 1), date(2018, 6, 30))
 
+    assert len(summer.registration_windows) == 2
+
     winter.add_registration_window(date(2017, 4, 1), date(2017, 6, 30))
     winter.add_registration_window(date(2018, 4, 1), date(2018, 6, 30))
+
+    assert len(winter.registration_windows) == 2
 
     # no overlap -> different forms
     session.flush()
@@ -110,6 +114,8 @@ def test_registration_window_overlaps(session):
 
     summer = forms.definitions.add('Summercamp', definition="E-Mail = @@@")
     summer.add_registration_window(date(2017, 4, 1), date(2017, 6, 30))
+
+    assert len(summer.registration_windows) == 1
 
     # no overlap -> different forms
     session.flush()

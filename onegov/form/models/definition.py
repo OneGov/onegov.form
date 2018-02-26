@@ -63,6 +63,10 @@ class FormDefinition(Base, ContentMixin, TimestampMixin, SearchableDefinition,
     #: link between forms and submissions
     submissions = relationship('FormSubmission', backref='form')
 
+    #: link between forms and registration windows
+    registration_windows = relationship(
+        'FormRegistrationWindow', backref='form')
+
     #: lead text describing the form
     lead = meta_property()
 
@@ -105,10 +109,9 @@ class FormDefinition(Base, ContentMixin, TimestampMixin, SearchableDefinition,
         window = FormRegistrationWindow(
             start=start,
             end=end,
-            name=self.name,
             **options
         )
 
-        object_session(self).add(window)
+        self.registration_windows.append(window)
 
         return window
