@@ -100,7 +100,8 @@ class FormDefinition(Base, ContentMixin, TimestampMixin, SearchableDefinition,
                     ).op('<->')(FormRegistrationWindow.end)
                 )
             ).limit(1)
-    )""")
+        )"""
+    )
 
     #: lead text describing the form
     lead = meta_property()
