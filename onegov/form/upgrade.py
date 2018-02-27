@@ -12,7 +12,7 @@ from onegov.core.utils import normalize_for_url
 from onegov.form import FormDefinitionCollection
 from onegov.form import FormFile
 from onegov.form import FormSubmission
-from sqlalchemy import Column, Text
+from sqlalchemy import Column, Integer, Text
 
 
 @upgrade_task('Enable external form submissions')
@@ -122,4 +122,23 @@ def add_group_order_to_form_definitions(context):
         table='forms',
         column=Column('order', Text, nullable=False, index=True),
         default=lambda form: normalize_for_url(form.title)
+    )
+
+
+@upgrade_task('Add registration window columns')
+def add_registration_window_columns(context):
+    context.operations.add_column(
+        'submissions',
+        Column('claimed', Integer, nullable=True)
+    )
+
+    context.operations.add_column(
+        'submissions',
+        Column('registration_window_id', Integer, nullable=True)
+    )
+
+    context.add_column_with_defaults(
+        table='submissions',
+        column=Column('spots', Integer, nullable=False),
+        default=0
     )

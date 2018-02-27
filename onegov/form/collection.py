@@ -3,12 +3,14 @@ import warnings
 from datetime import datetime, timedelta
 from onegov.core.crypto import random_token
 from onegov.core.utils import normalize_for_url
+from onegov.core.collection import GenericCollection
 from onegov.file.utils import as_fileintent
 from onegov.form.errors import UnableToComplete
 from onegov.form.fields import UploadField
 from onegov.form.models import (
     FormDefinition,
     FormSubmission,
+    FormRegistrationWindow,
     FormFile
 )
 from sedate import replace_timezone, utcnow
@@ -381,3 +383,22 @@ class FormSubmissionCollection(object):
         """ Deletes the given submission and all the files belonging to it. """
         self.session.delete(submission)
         self.session.flush()
+
+
+class FormRegistrationWindowCollection(GenericCollection):
+
+    def __init__(self, session, name=None):
+        super().__init__(session)
+        self.name = name
+
+    @property
+    def model_class(self):
+        return FormRegistrationWindow
+
+    def query(self):
+        query = super().query()
+
+        if self.name:
+            query = query.filter_by(FormRegistrationWindow.name == self.name)
+
+        return query
