@@ -67,6 +67,41 @@ class FormDefinition(Base, ContentMixin, TimestampMixin, SearchableDefinition,
     registration_windows = relationship(
         'FormRegistrationWindow', backref='form')
 
+    #: the currently active registration window
+    #:
+    #: this sorts the registration windows by the smaller k-nearest neighbour
+    #: result of both start and end in relation to the current date
+    #:
+    #: the result is the *nearest* date range in relation to today:
+    #: * during an active registration window, it's that active window
+    #: * outside of active windows, it's last window half way until
+    #:   the next window starts
+    #:
+    #: this could of course be done more conventionally, but this is cooler 😅
+    current_registration_window = relationship(
+        'FormRegistrationWindow', viewonly=True, uselist=False,
+        primaryjoin="""and_(
+            FormRegistrationWindow.name == FormDefinition.name,
+            FormRegistrationWindow.id == select((
+                FormRegistrationWindow.id,
+            )).where(
+                FormRegistrationWindow.name == FormDefinition.name
+            ).order_by(
+                func.least(
+                    cast(
+                        func.current_date().op('AT TIME ZONE')(
+                            FormRegistrationWindow.timezone
+                        ), Date
+                    ).op('<->')(FormRegistrationWindow.start),
+                    cast(
+                        func.current_date().op('AT TIME ZONE')(
+                            FormRegistrationWindow.timezone
+                        ), Date
+                    ).op('<->')(FormRegistrationWindow.end)
+                )
+            ).limit(1)
+    )""")
+
     #: lead text describing the form
     lead = meta_property()
 

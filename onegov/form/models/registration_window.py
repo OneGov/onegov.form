@@ -23,7 +23,7 @@ class FormRegistrationWindow(Base, TimestampMixin):
 
     """
 
-    __tablename__ = 'form_registration_windows'
+    __tablename__ = 'registration_windows'
 
     #: the public id of the registraiton window
     id = Column(UUID, primary_key=True, default=uuid4)
@@ -39,6 +39,9 @@ class FormRegistrationWindow(Base, TimestampMixin):
 
     #: the end date of the window
     end = Column(Date, nullable=False)
+
+    #: the timezone of the window
+    timezone = Column(Text, nullable=False, default='Europe/Zurich')
 
     #: the number of spots (None => unlimited)
     limit = Column(Integer, nullable=True)
@@ -70,6 +73,5 @@ class FormRegistrationWindow(Base, TimestampMixin):
         CheckConstraint(
             '"start" <= "end"',
             name='start_smaller_than_end'
-        )
-
+        ),
     )

@@ -1,10 +1,14 @@
 import pytest
 
-from datetime import date
+from datetime import date, timedelta
 from onegov.form import FormCollection, FormExtension
 from sqlalchemy.exc import IntegrityError
 from webob.multidict import MultiDict
 from wtforms import ValidationError
+
+
+def days(d):
+    return timedelta(days=d)
 
 
 def test_has_submissions(session):
@@ -139,3 +143,30 @@ def test_registration_window_end_before_start(session):
         session.flush()
 
     assert 'start_smaller_than_end' in str(e)
+
+
+def test_current_registration_window_bound_to_form(session):
+    forms = FormCollection(session)
+    today = date.today()
+
+    winter = forms.definitions.add('Witnercamp', definition="E-Mail = @@@")
+    winter.add_registration_window(today - days(1), today + days(1))
+
+    summer = forms.definitions.add('Summercamp', definition="E-Mail = @@@")
+    summer.add_registration_window(today - days(100), today - days(10))
+
+    assert winter.current_registration_window.start == today - days(1)
+    assert summer.current_registration_window.start == today - days(100)
+
+
+def test_current_registration_window_end_date(session):
+    forms = FormCollection(session)
+    today = date.today()
+
+    summer = forms.definitions.add('Summercamp', definition="E-Mail = @@@")
+
+    # the first window is closer, though the start is further away
+    summer.add_registration_window(today - days(10), today - days(1))
+    summer.add_registration_window(today + days(5), today + days(10))
+
+    assert summer.current_registration_window.start == today - days(10)
