@@ -134,7 +134,7 @@ class FormSubmissionCollection(object):
         return query
 
     def add(self, name, form, state, id=None, payment_method=None,
-            meta=None, email=None):
+            meta=None, email=None, spots=None):
         """ Takes a filled-out form instance and stores the submission
         in the database. The form instance is expected to have a ``_source``
         parameter, which contains the source used to build the form (as only
@@ -161,6 +161,14 @@ class FormSubmissionCollection(object):
                 self.session.query(FormDefinition)
                     .filter_by(name=name).one())
 
+        if definition is None:
+            registration_window = None
+        else:
+            registration_window = definition.current_registration_window
+
+        if registration_window:
+            assert registration_window.accepts_submissions
+
         # look up the right class depending on the type
         submission_class = FormSubmission.get_polymorphic_class(
             state, FormSubmission
@@ -172,6 +180,8 @@ class FormSubmissionCollection(object):
         submission.state = state
         submission.meta = meta or {}
         submission.email = email
+        submission.registration_window = registration_window
+        submission.spots = spots
         submission.payment_method = (
             payment_method or
             definition and definition.payment_method or

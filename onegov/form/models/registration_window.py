@@ -1,11 +1,13 @@
+import sedate
+
 from onegov.core.orm import Base
 from onegov.core.orm.mixins import TimestampMixin
 from onegov.core.orm.types import UUID
-from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, Text
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, Text, text
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.sql.elements import quoted_name
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import object_session, relationship
 from uuid import uuid4
 
 
@@ -75,3 +77,51 @@ class FormRegistrationWindow(Base, TimestampMixin):
             name='start_smaller_than_end'
         ),
     )
+
+    @property
+    def localized_start(self):
+        return sedate.align_date_to_day(
+            sedate.standardize_date(
+                sedate.as_datetime(self.start), self.timezone
+            ), self.timezone, 'down'
+        )
+
+    @property
+    def localized_end(self):
+        return sedate.align_date_to_day(
+            sedate.standardize_date(
+                sedate.as_datetime(self.end), self.timezone
+            ), self.timezone, 'up'
+        )
+
+    @property
+    def accepts_submissions(self):
+        if not self.enabled:
+            return False
+
+        if not (self.localized_start <= sedate.utcnow() <= self.localized_end):
+            return False
+
+        if self.overflow:
+            return True
+
+        if self.limit is None:
+            return True
+
+        return (self.claimed_spots + self.requested_spots) < self.limit
+
+    @property
+    def claimed_spots(self):
+        return object_session(self).execute(text("""
+            SELECT SUM(COALESCE(claimed, 0))
+            FROM submissions
+            WHERE registration_window_id = :id
+        """), {'id': self.id}).scalar() or 0
+
+    @property
+    def requested_spots(self):
+        return object_session(self).execute(text("""
+            SELECT SUM(GREATEST(COALESCE(spots, 0) - COALESCE(claimed, 0), 0))
+            FROM submissions
+            WHERE registration_window_id = :id
+        """), {'id': self.id}).scalar() or 0

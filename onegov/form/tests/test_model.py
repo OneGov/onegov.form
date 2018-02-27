@@ -170,3 +170,84 @@ def test_current_registration_window_end_date(session):
     summer.add_registration_window(today + days(5), today + days(10))
 
     assert summer.current_registration_window.start == today - days(10)
+
+
+def test_registration_window_spots(session):
+    forms = FormCollection(session)
+    today = date.today()
+
+    summer = forms.definitions.add('Summercamp', definition="E-Mail = @@@")
+    window = summer.add_registration_window(today - days(5), today + days(5))
+
+    session.flush()
+
+    window.enabled = False
+    assert not window.accepts_submissions
+
+    window.enabled = True
+    window.end = today - days(1)
+    assert not window.accepts_submissions
+
+    window.start = today + days(1)
+    window.end = today + days(5)
+    assert not window.accepts_submissions
+
+    window.start = today - days(5)
+    window.overflow = True
+    assert window.accepts_submissions
+
+    window.overflow = False
+    window.limit = None
+    assert window.accepts_submissions
+    assert window.claimed_spots == 0
+    assert window.requested_spots == 0
+
+    window.limit = 2
+    assert window.accepts_submissions
+    assert window.claimed_spots == 0
+    assert window.requested_spots == 0
+
+    s1 = forms.submissions.add(
+        name='summercamp',
+        form=summer.form_class(data={'e_mail': 'info@example.org'}),
+        state='complete',
+        spots=1
+    )
+
+    assert window.accepts_submissions
+    assert window.claimed_spots == 0
+    assert window.requested_spots == 1
+
+    s2 = forms.submissions.add(
+        name='summercamp',
+        form=summer.form_class(data={'e_mail': 'info@example.org'}),
+        state='complete',
+        spots=1
+    )
+
+    assert not window.accepts_submissions
+    assert window.claimed_spots == 0
+    assert window.requested_spots == 2
+
+    window.overflow = True
+    assert window.accepts_submissions
+
+    s1.claimed = 1
+    session.flush()
+
+    assert window.accepts_submissions
+    assert window.claimed_spots == 1
+    assert window.requested_spots == 1
+
+    window.overflow = False
+    assert not window.accepts_submissions
+
+    s2.claimed = 1
+    session.flush()
+
+    assert not window.accepts_submissions
+    assert window.claimed_spots == 2
+    assert window.requested_spots == 0
+
+    window.overflow = True
+    assert window.accepts_submissions
