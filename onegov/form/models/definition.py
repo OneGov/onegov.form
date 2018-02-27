@@ -89,12 +89,12 @@ class FormDefinition(Base, ContentMixin, TimestampMixin, SearchableDefinition,
             ).order_by(
                 func.least(
                     cast(
-                        func.current_date().op('AT TIME ZONE')(
+                        func.now().op('AT TIME ZONE')(
                             FormRegistrationWindow.timezone
                         ), Date
                     ).op('<->')(FormRegistrationWindow.start),
                     cast(
-                        func.current_date().op('AT TIME ZONE')(
+                        func.now().op('AT TIME ZONE')(
                             FormRegistrationWindow.timezone
                         ), Date
                     ).op('<->')(FormRegistrationWindow.end)
