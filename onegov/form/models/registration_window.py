@@ -110,6 +110,12 @@ class FormRegistrationWindow(Base, TimestampMixin):
 
         return (self.claimed_spots + self.requested_spots) < self.limit
 
+    def disassociate(self):
+        """ Disassociates all records linked to this window. """
+
+        for submission in self.submissions:
+            submission.registration_window_id = None
+
     @property
     def claimed_spots(self):
         return object_session(self).execute(text("""
