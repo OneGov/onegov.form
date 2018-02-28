@@ -65,7 +65,9 @@ class FormDefinition(Base, ContentMixin, TimestampMixin, SearchableDefinition,
 
     #: link between forms and registration windows
     registration_windows = relationship(
-        'FormRegistrationWindow', backref='form')
+        'FormRegistrationWindow',
+        backref='form',
+        order_by='FormRegistrationWindow.start')
 
     #: the currently active registration window
     #:

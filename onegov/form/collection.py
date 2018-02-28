@@ -32,6 +32,10 @@ class FormCollection(object):
     def submissions(self):
         return FormSubmissionCollection(self.session)
 
+    @property
+    def registration_windows(self):
+        return FormRegistrationWindowCollection(self.session)
+
     def scoped_submissions(self, name, ensure_existance=True):
         if not ensure_existance or self.definitions.by_name(name):
             return FormSubmissionCollection(self.session, name)
