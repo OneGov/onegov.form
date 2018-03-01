@@ -99,7 +99,7 @@ class FormRegistrationWindow(Base, TimestampMixin):
         if not self.enabled:
             return False
 
-        if not (self.localized_start <= sedate.utcnow() <= self.localized_end):
+        if not self.in_the_present:
             return False
 
         if self.overflow:
@@ -108,7 +108,7 @@ class FormRegistrationWindow(Base, TimestampMixin):
         if self.limit is None:
             return True
 
-        return (self.claimed_spots + self.requested_spots) < self.limit
+        return self.available_spots > 0
 
     def disassociate(self):
         """ Disassociates all records linked to this window. """
@@ -117,11 +117,16 @@ class FormRegistrationWindow(Base, TimestampMixin):
             submission.registration_window_id = None
 
     @property
+    def available_spots(self):
+        return self.limit - self.claimed_spots - self.requested_spots
+
+    @property
     def claimed_spots(self):
         return object_session(self).execute(text("""
             SELECT SUM(COALESCE(claimed, 0))
             FROM submissions
             WHERE registration_window_id = :id
+            AND submissions.state = 'complete'
         """), {'id': self.id}).scalar() or 0
 
     @property
@@ -130,4 +135,17 @@ class FormRegistrationWindow(Base, TimestampMixin):
             SELECT SUM(GREATEST(COALESCE(spots, 0) - COALESCE(claimed, 0), 0))
             FROM submissions
             WHERE registration_window_id = :id
+            AND submissions.state = 'complete'
         """), {'id': self.id}).scalar() or 0
+
+    @property
+    def in_the_future(self):
+        return sedate.utcnow() <= self.localized_start
+
+    @property
+    def in_the_past(self):
+        return self.localized_end <= sedate.utcnow()
+
+    @property
+    def in_the_present(self):
+        return self.localized_start <= sedate.utcnow() <= self.localized_end
