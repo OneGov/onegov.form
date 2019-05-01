@@ -2,7 +2,7 @@ import chameleon
 import humanize
 
 from cgi import escape
-from onegov.file.utils import IMAGE_MIME_TYPES
+from onegov.file.utils import IMAGE_MIME_TYPES_AND_SVG
 from onegov.form import _
 from wtforms.widgets import FileInput
 from wtforms.widgets import ListWidget
@@ -93,7 +93,7 @@ class UploadWidget(FileInput):
         if not field.data:
             return
 
-        if not field.data.get('mimetype', None) in IMAGE_MIME_TYPES:
+        if not field.data.get('mimetype', None) in IMAGE_MIME_TYPES_AND_SVG:
             return
 
         if not hasattr(field, 'object_data'):
@@ -121,41 +121,40 @@ class UploadWidget(FileInput):
                 preview = ''
             else:
                 preview = f"""
-                    <img src="{src}">
+                    <div class="uploaded-image"><img src="{src}"></div>
                 """
 
             return HTMLString("""
                 <div class="upload-widget with-data">
                     <p>{existing_file_label}: {filename} ({filesize}) ✓</p>
-                    <div>
-                        {preview}
 
-                        <ul>
-                            <li>
-                                <input type="radio" id="{name}-0" name="{name}"
-                                       value="keep" checked="">
-                                <label for="{name}-0">{keep_label}</label>
-                            </li>
-                            <li>
-                                <input type="radio" id="{name}-1" name="{name}"
-                                       value="delete">
-                                <label for="{name}-1">{delete_label}</label>
-                            </li>
-                            <li>
-                                <input type="radio" id="{name}-2" name="{name}"
-                                       value="replace">
-                                <label for="{name}-2">{replace_label}</label>
-                                <div>
-                                    <label>
-                                        <div data-depends-on="{name}/replace"
-                                             data-hide-label="false">
-                                            {input_html}
-                                        </div>
-                                    </label>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
+                    {preview}
+
+                    <ul>
+                        <li>
+                            <input type="radio" id="{name}-0" name="{name}"
+                                   value="keep" checked="">
+                            <label for="{name}-0">{keep_label}</label>
+                        </li>
+                        <li>
+                            <input type="radio" id="{name}-1" name="{name}"
+                                   value="delete">
+                            <label for="{name}-1">{delete_label}</label>
+                        </li>
+                        <li>
+                            <input type="radio" id="{name}-2" name="{name}"
+                                   value="replace">
+                            <label for="{name}-2">{replace_label}</label>
+                            <div>
+                                <label>
+                                    <div data-depends-on="{name}/replace"
+                                         data-hide-label="false">
+                                        {input_html}
+                                    </div>
+                                </label>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
             """.format(
                 # be careful, we do our own html generation here without any
